@@ -1,0 +1,125 @@
+service: one-vision-image
+frameworkVersion: '3'
+
+custom:
+  bucketName: one-vision-image
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  webpack:
+    webpackConfig: webpack.config.js
+    # includeModules:
+    #   forceExclude:
+    #     - aws-sdk
+  prune:
+    automatic: true
+    number: 3
+
+plugins:
+  # - serverless-webpack
+  - serverless-prune-plugin
+  - serverless-offline
+
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1  
+  memorySize: 128
+  iam: #permisions for lambda access the s3 actions
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:PutObjectAcl
+          Resource:
+            - arn:aws:s3:::${self:custom.bucketName}/*
+          Sid: AllowPublic
+
+
+functions:
+  upload:
+    handler: src/api/index.handler
+    name: ${self:custom.bucketName}
+    environment:
+      UploadBucket: ${self:custom.bucketName}
+    events:
+      - http: # create a api gateway to trigger de lambda function
+          path: /${self:custom.bucketName}
+          method: get
+          cors: true
+  getSignedUrl:
+    handler: src/api/s3.handler
+    name: obtenerUrl
+    environment:
+      UploadBucket: ${self:custom.bucketName}
+    description: This function generates a signed URL for accessing a resource in S3.
+    package:
+      individually: true    
+    events:
+      - http:
+          path: uploads3image
+          method: get
+          cors: true 
+
+
+resources:
+  Resources:
+    UploadBucket:  # Crea un bucket de S3
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteAfter24Hours
+              Status: Enabled
+              Transitions: []
+              NoncurrentVersionTransitions: []
+              ExpirationInDays: 1
+        BucketName: ${self:custom.bucketName}
+        CorsConfiguration: # Define la configuración de CORS
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - HEAD
+                - PUT
+                - POST
+                - DELETE
+              AllowedOrigins:
+                - "*"
+    SampleBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref UploadBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Action:
+                - 's3:GetObject'
+              Effect: Allow
+              Resource: !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref UploadBucket
+                  - /*
+              Principal: '*'
+              
+
+package:
+  individually: true
+  patterns:
+    # include
+    - src/**
+    # exclude
+    - "!*"
+    - "!__tests__/**"
+    - "!documentation/**"
+    - "!node_modules/aws-sdk/**"
+    - "!node_modules/aws-sign2/**"
+    - "!node_modules/aws4/**"
