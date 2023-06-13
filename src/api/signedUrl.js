@@ -16,9 +16,9 @@ const s3 = new AWS.S3();
 
 const getPresignedURLS3 = async (event) => {
   const { queryStringParameters } = event;
-  const { type, mimeType } = queryStringParameters;
+  const { mimeType } = queryStringParameters;
 
-  if (!type || !mimeType) {
+  if (!mimeType) {
     return {
       statusCode: 400,
       body: JSON.stringify({
@@ -27,34 +27,19 @@ const getPresignedURLS3 = async (event) => {
     };
   }
 
-  // Validar el tipo de archivo (message o template)
-  const allowedMediaTypes = ["image"];
-  if (!allowedMediaTypes.includes(type)) {
+  const validMimeTypes = [...validImagesTypes, ...validStikerTypes];
+  if (!validMimeTypes.includes(mimeType)) {
     return {
       statusCode: 400,
       body: JSON.stringify({
         message:
-          'El tipo de archivo proporcionado no es válido. Por favor, ingrese "image"',
+          "El mimeType de archivo proporcionado no es válido para el tipo message.",
       }),
     };
   }
 
-  if (type === "image") {
-    // Validar el mimeType solo para archivos de tipo "message"
-    const validMimeTypes = [...validImagesTypes, ...validStikerTypes];
-    if (!validMimeTypes.includes(mimeType)) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          message:
-            "El mimeType de archivo proporcionado no es válido para el tipo message.",
-        }),
-      };
-    }
-  }
-
   try {
-    const key = `${type}/${uuid()}`;
+    const key = `image/${uuid()}`;
     const params = {
       Bucket: FILES_BUCKET,
       Expires: 300, // 5 min para enviar el archivo

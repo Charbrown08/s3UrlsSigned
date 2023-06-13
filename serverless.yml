@@ -41,7 +41,7 @@ provider:
 
 functions:
   upload:
-    handler: src/api/index.handler
+    handler: src/api/signedUrl2.handler
     name: ${self:custom.bucketName}
     environment:
       UploadBucket: ${self:custom.bucketName}
@@ -51,7 +51,7 @@ functions:
           method: get
           cors: true
   getSignedUrl:
-    handler: src/api/s3.handler
+    handler: src/api/signedUrl.handler
     name: obtenerUrl
     environment:
       UploadBucket: ${self:custom.bucketName}

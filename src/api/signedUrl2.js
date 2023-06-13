@@ -14,7 +14,7 @@ const getUploadURL = async function () {
   const s3Params = {
     Bucket: process.env.UploadBucket,
     Key,
-    ContentType: "image/jpeg",
+    ContentType: "image/png",
   };
 
   const uploadURL = await s3.getSignedUrlPromise("putObject", s3Params);
